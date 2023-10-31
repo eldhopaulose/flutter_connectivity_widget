@@ -16,8 +16,9 @@ void main() {
       utils = MockConnectivityUtils();
 
       when(() => utils.getPhoneConnection).thenReturn(false);
-      when(() => utils.isPhoneConnectedStream)
-          .thenAnswer((_) => Stream.value(false));
+      when(() => utils.isPhoneConnectedStream).thenAnswer(
+        (_) => Stream.value(false).asBroadcastStream(),
+      );
 
       ConnectivityUtils.setInstance(utils);
 
@@ -39,8 +40,9 @@ void main() {
       utils = MockConnectivityUtils();
 
       when(() => utils.getPhoneConnection).thenReturn(true);
-      when(() => utils.isPhoneConnectedStream)
-          .thenAnswer((_) => Stream.value(true));
+      when(() => utils.isPhoneConnectedStream).thenAnswer(
+        (_) => Stream.value(true).asBroadcastStream(),
+      );
 
       ConnectivityUtils.setInstance(utils);
 
@@ -61,8 +63,9 @@ void main() {
       utils = MockConnectivityUtils();
 
       when(() => utils.getPhoneConnection).thenReturn(false);
-      when(() => utils.isPhoneConnectedStream)
-          .thenAnswer((_) => Stream.value(false));
+      when(() => utils.isPhoneConnectedStream).thenAnswer(
+        (_) => Stream.value(false).asBroadcastStream(),
+      );
 
       ConnectivityUtils.setInstance(utils);
 
@@ -85,8 +88,9 @@ void main() {
       utils = MockConnectivityUtils();
 
       when(() => utils.getPhoneConnection).thenReturn(false);
-      when(() => utils.isPhoneConnectedStream)
-          .thenAnswer((_) => Stream.value(false));
+      when(() => utils.isPhoneConnectedStream).thenAnswer(
+        (_) => Stream.value(false).asBroadcastStream(),
+      );
 
       ConnectivityUtils.setInstance(utils);
 
@@ -108,8 +112,9 @@ void main() {
       utils = MockConnectivityUtils();
 
       when(() => utils.getPhoneConnection).thenReturn(true);
-      when(() => utils.isPhoneConnectedStream)
-          .thenAnswer((_) => Stream.value(true));
+      when(() => utils.isPhoneConnectedStream).thenAnswer(
+        (_) => Stream.value(true).asBroadcastStream(),
+      );
 
       ConnectivityUtils.setInstance(utils);
 
@@ -131,8 +136,9 @@ void main() {
       utils = MockConnectivityUtils();
 
       when(() => utils.getPhoneConnection).thenReturn(false);
-      when(() => utils.isPhoneConnectedStream)
-          .thenAnswer((_) => Stream.value(false));
+      when(() => utils.isPhoneConnectedStream).thenAnswer(
+        (_) => Stream.value(false).asBroadcastStream(),
+      );
 
       final child = Text("Bananas");
 
@@ -156,8 +162,9 @@ void main() {
       utils = MockConnectivityUtils();
 
       when(() => utils.getPhoneConnection).thenReturn(true);
-      when(() => utils.isPhoneConnectedStream)
-          .thenAnswer((_) => Stream.value(true));
+      when(() => utils.isPhoneConnectedStream).thenAnswer(
+        (_) => Stream.value(true).asBroadcastStream(),
+      );
 
       final child = Text("Bananas");
 
@@ -249,6 +256,72 @@ void main() {
       await controller.close();
     });
 
+    testWidgets('the loading widget is shown before we receive any data',
+        (tester) async {
+      utils = MockConnectivityUtils();
+
+      final controller = StreamController<bool>.broadcast();
+
+      when(() => utils.getPhoneConnection).thenReturn(false);
+      when(() => utils.isPhoneConnectedStream)
+          .thenAnswer((_) => controller.stream);
+
+      ConnectivityUtils.setInstance(utils);
+
+      final expectedText = "Loading the widget";
+
+      await tester.pumpWidget(TestShell(
+        widget: ConnectivityWidget(
+          initialLoadingWidget: Text(expectedText),
+          builder: (context, isOnline) {
+            return Container();
+          },
+        ),
+      ));
+
+      await tester.pump(
+        Duration(
+          milliseconds: 500,
+        ),
+      );
+
+      expect(find.text(expectedText), findsOneWidget);
+
+      await controller.close();
+    });
+
+    testWidgets(
+        'by default, the loading widget is a [CircularProgressIndicator]',
+        (tester) async {
+      utils = MockConnectivityUtils();
+
+      final controller = StreamController<bool>.broadcast();
+
+      when(() => utils.getPhoneConnection).thenReturn(false);
+      when(() => utils.isPhoneConnectedStream)
+          .thenAnswer((_) => controller.stream);
+
+      ConnectivityUtils.setInstance(utils);
+
+      await tester.pumpWidget(TestShell(
+        widget: ConnectivityWidget(
+          builder: (context, isOnline) {
+            return Container();
+          },
+        ),
+      ));
+
+      await tester.pump(
+        Duration(
+          milliseconds: 500,
+        ),
+      );
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await controller.close();
+    });
+
     testWidgets('builder is called with correct value', (tester) async {
       utils = MockConnectivityUtils();
 
@@ -258,22 +331,28 @@ void main() {
       when(() => utils.isPhoneConnectedStream)
           .thenAnswer((_) => controller.stream);
 
-      controller.add(true);
-
       bool? online;
 
       ConnectivityUtils.setInstance(utils);
 
-      await tester.pumpWidget(TestShell(
-        widget: ConnectivityWidget(
-          builder: (context, isOnline) {
-            online = isOnline;
-            return Container();
-          },
+      await tester.pumpWidget(
+        TestShell(
+          widget: ConnectivityWidget(
+            builder: (context, isOnline) {
+              online = isOnline;
+              return Container();
+            },
+          ),
         ),
-      ));
+      );
 
-      await tester.pumpAndSettle();
+      controller.add(true);
+
+      await tester.pump(
+        Duration(
+          milliseconds: 500,
+        ),
+      );
 
       expect(online, isTrue);
 
@@ -289,8 +368,6 @@ void main() {
       when(() => utils.isPhoneConnectedStream)
           .thenAnswer((_) => controller.stream);
 
-      controller.add(true);
-
       bool? online;
 
       ConnectivityUtils.setInstance(utils);
@@ -304,11 +381,21 @@ void main() {
         ),
       ));
 
-      await tester.pumpAndSettle();
+      controller.add(true);
+
+      await tester.pump(
+        Duration(
+          milliseconds: 500,
+        ),
+      );
 
       controller.add(false);
 
-      await tester.pumpAndSettle();
+      await tester.pump(
+        Duration(
+          milliseconds: 500,
+        ),
+      );
 
       expect(online, isFalse);
 
