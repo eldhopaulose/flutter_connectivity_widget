@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_widget/connectivity_widget.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
   /// Setup Connectivity Utils
   ConnectivityUtils.instance
     ..serverToPing =
